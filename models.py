@@ -1,8 +1,10 @@
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from datetime import datetime
+from logger_config import get_logger
 
 db = SQLAlchemy()
+logger = get_logger('models')
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -34,21 +36,34 @@ class Post(db.Model):
     posted_at = db.Column(db.DateTime)
     error_message = db.Column(db.Text)
 
-def init_db():
-    db.create_all()
-    create_sample_accounts()
+def init_database_tables():
+    try:
+        db.create_all()
+        logger.info("Database tables created successfully")
+    except Exception as error:
+        logger.error(f"Failed to create database tables: {str(error)}")
+        raise
 
 def create_sample_accounts():
     from flask_login import current_user
-    if hasattr(current_user, 'id') and current_user.id:
-        existing_accounts = SocialAccount.query.filter_by(user_id=current_user.id).first()
-        if not existing_accounts:
-            platforms = ['LinkedIn', 'Twitter', 'Instagram', 'Facebook']
-            for platform in platforms:
-                account = SocialAccount(
-                    user_id=current_user.id,
-                    platform=platform,
-                    account_name=f"{current_user.username}_{platform.lower()}"
-                )
-                db.session.add(account)
-            db.session.commit()
+    try:
+        if hasattr(current_user, 'id') and current_user.id:
+            existing_accounts = SocialAccount.query.filter_by(user_id=current_user.id).first()
+            if not existing_accounts:
+                platforms = ['LinkedIn', 'Twitter', 'Instagram', 'Facebook']
+                for platform in platforms:
+                    account = SocialAccount(
+                        user_id=current_user.id,
+                        platform=platform,
+                        account_name=f"{current_user.username}_{platform.lower()}"
+                    )
+                    db.session.add(account)
+                db.session.commit()
+                logger.info(f"Created sample accounts for user {current_user.id}")
+    except Exception as error:
+        logger.error(f"Failed to create sample accounts: {str(error)}")
+        db.session.rollback()
+
+def init_db():
+    init_database_tables()
+    create_sample_accounts()

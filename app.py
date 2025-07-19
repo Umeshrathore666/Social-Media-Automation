@@ -1,15 +1,17 @@
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_from_directory
 from flask_login import LoginManager, login_required, current_user
 from datetime import datetime
 import json
+import os
 
-from config import Config
+from config import Config, get_upload_folder
 from models import db, User, SocialAccount, Post, init_db
 from auth import auth_bp
 from ai_service import generate_complete_post
 from scheduler import start_scheduler, schedule_post, cancel_scheduled_post
 from error_handlers import with_error_handling, with_database_error_handling
 from logger_config import setup_application_logger, get_logger
+from image_generation import cleanup_old_images
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -27,6 +29,11 @@ def load_user(user_id):
     return User.query.get(int(user_id))
 
 app.register_blueprint(auth_bp, url_prefix='/auth')
+
+@app.route('/static/generated_images/<filename>')
+def serve_generated_image(filename):
+    upload_folder = get_upload_folder()
+    return send_from_directory(upload_folder, filename)
 
 def get_user_accounts():
     accounts = SocialAccount.query.filter_by(user_id=current_user.id, is_active=True).all()
@@ -74,6 +81,21 @@ def get_dashboard_stats():
         'connected_accounts': len(get_user_accounts())
     }
     return stats
+
+def perform_maintenance_tasks():
+    try:
+        cleanup_old_images()
+        logger.info("Maintenance tasks completed")
+    except Exception as error:
+        logger.error(f"Maintenance tasks failed: {str(error)}")
+
+def ensure_static_directories():
+    static_dir = os.path.join(app.root_path, 'static')
+    if not os.path.exists(static_dir):
+        os.makedirs(static_dir)
+    
+    upload_dir = get_upload_folder()
+    logger.info(f"Static directories ensured: {upload_dir}")
 
 @app.route('/')
 def index():
@@ -170,7 +192,9 @@ def internal_error(error):
 
 if __name__ == '__main__':
     with app.app_context():
+        ensure_static_directories()
         init_db()
+        perform_maintenance_tasks()
     start_scheduler()
-    logger.info("Application started successfully")
+    logger.info("Application started successfully with AI image generation")
     app.run(debug=True)

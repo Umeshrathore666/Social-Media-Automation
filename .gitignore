@@ -70,3 +70,8 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST 
+
+# untracked files
+/static/generated_images/
+/static/uploads/
+

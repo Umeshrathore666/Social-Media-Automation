@@ -21,7 +21,7 @@ def handle_database_error(error, operation):
 def handle_ai_service_error(error, operation):
     error_message = f"AI service error during {operation}: {str(error)}"
     logger.error(error_message)
-    flash('AI service is temporarily unavailable. Please try again.', 'error')
+    flash('AI service failed to complete the operation. Please try again.', 'error')
     return error_message
 
 def handle_general_error(error, operation):
@@ -64,7 +64,7 @@ def with_database_error_handling(operation_name, redirect_route='dashboard'):
         return wrapper
     return decorator
 
-def with_ai_error_handling(operation_name, fallback_response=None):
+def with_ai_error_handling(operation_name):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -75,6 +75,6 @@ def with_ai_error_handling(operation_name, fallback_response=None):
                 return result
             except Exception as error:
                 handle_ai_service_error(error, operation_name)
-                return fallback_response or {'content': 'Error generating content', 'image_url': ''}
+                raise error
         return wrapper
     return decorator

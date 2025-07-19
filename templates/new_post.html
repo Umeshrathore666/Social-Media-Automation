@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col s12">
+        <h4>Create New Post</h4>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col s12 m6">
+        <div class="card">
+            <div class="card-content">
+                <span class="card-title">AI Post Generator</span>
+                <form method="POST">
+                    <input type="hidden" name="action" value="generate">
+                    <div class="input-field">
+                        <select name="platform" id="platform">
+                            <option value="LinkedIn" {{ 'selected' if platform == 'LinkedIn' else '' }}>LinkedIn</option>
+                            <option value="Twitter" {{ 'selected' if platform == 'Twitter' else '' }}>Twitter</option>
+                            <option value="Instagram" {{ 'selected' if platform == 'Instagram' else '' }}>Instagram</option>
+                            <option value="Facebook" {{ 'selected' if platform == 'Facebook' else '' }}>Facebook</option>
+                        </select>
+                        <label>Platform</label>
+                    </div>
+                    <div class="input-field">
+                        <i class="material-icons prefix">lightbulb_outline</i>
+                        <input id="topic" name="topic" type="text" value="{{ topic or '' }}" required>
+                        <label for="topic">Topic or Keywords</label>
+                    </div>
+                    <button class="btn waves-effect waves-light blue" type="submit">
+                        <i class="material-icons left">auto_awesome</i>Generate Post
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col s12 m6">
+        <div class="card">
+            <div class="card-content">
+                <span class="card-title">Publish Settings</span>
+                <form method="POST" id="publishForm">
+                    <input type="hidden" name="action" value="publish">
+                    
+                    <div class="input-field">
+                        <i class="material-icons prefix">edit</i>
+                        <textarea id="content" name="content" class="materialize-textarea" required>{{ generated_post.content if generated_post else '' }}</textarea>
+                        <label for="content">Post Content</label>
+                    </div>
+                    
+                    <div class="input-field">
+                        <i class="material-icons prefix">image</i>
+                        <input id="image_url" name="image_url" type="url" value="{{ generated_post.image_url if generated_post else '' }}">
+                        <label for="image_url">Image URL</label>
+                    </div>
+                    
+                    <p>Select Accounts:</p>
+                    {% for account in accounts %}
+                    <p>
+                        <label>
+                            <input type="checkbox" name="selected_accounts" value="{{ account.id }}" />
+                            <span>{{ account.platform }} - {{ account.account_name }}</span>
+                        </label>
+                    </p>
+                    {% endfor %}
+                    
+                    <div class="row">
+                        <div class="col s6">
+                            <div class="input-field">
+                                <input id="schedule_date" name="schedule_date" type="date">
+                                <label for="schedule_date">Schedule Date (Optional)</label>
+                            </div>
+                        </div>
+                        <div class="col s6">
+                            <div class="input-field">
+                                <input id="schedule_time" name="schedule_time" type="time">
+                                <label for="schedule_time">Schedule Time</label>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <button class="btn waves-effect waves-light green" type="submit">
+                        <i class="material-icons left">send</i>Publish Post
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if generated_post %}
+<div class="row">
+    <div class="col s12">
+        <div class="card">
+            <div class="card-content">
+                <span class="card-title">Generated Post Preview</span>
+                <div class="generated-post">
+                    <p>{{ generated_post.content }}</p>
+                    {% if generated_post.image_url %}
+                    <div class="post-preview">
+                        <img src="{{ generated_post.image_url }}" alt="Generated image" class="responsive-img">
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

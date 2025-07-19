@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col s12">
+        <h4>Account Settings</h4>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col s12">
+        <div class="card">
+            <div class="card-content">
+                <span class="card-title">Connected Social Media Accounts</span>
+                {% if accounts %}
+                    <div class="row">
+                        {% for account in accounts %}
+                        <div class="col s12 m6 l4">
+                            <div class="card">
+                                <div class="card-content center-align">
+                                    <i class="material-icons large {{ 'blue-text' if account.platform == 'LinkedIn' else 'light-blue-text' if account.platform == 'Twitter' else 'pink-text' if account.platform == 'Instagram' else 'indigo-text' }}">
+                                        {{ 'business' if account.platform == 'LinkedIn' else 'chat' if account.platform == 'Twitter' else 'photo_camera' if account.platform == 'Instagram' else 'public' }}
+                                    </i>
+                                    <h6>{{ account.platform }}</h6>
+                                    <p>{{ account.account_name }}</p>
+                                    <p class="green-text">
+                                        <i class="material-icons tiny">check_circle</i> Connected
+                                    </p>
+                                </div>
+                                <div class="card-action center-align">
+                                    <a href="#" class="btn-small red">Disconnect</a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="center-align grey-text">
+                        <i class="material-icons large">link_off</i><br>
+                        No accounts connected yet.
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col s12">
+        <div class="card">
+            <div class="card-content">
+                <span class="card-title">Add New Account</span>
+                <p>Connect your social media accounts to start posting.</p>
+                <div class="row">
+                    <div class="col s6 m3">
+                        <a href="#" class="btn blue waves-effect waves-light">
+                            <i class="material-icons left">business</i>LinkedIn
+                        </a>
+                    </div>
+                    <div class="col s6 m3">
+                        <a href="#" class="btn light-blue waves-effect waves-light">
+                            <i class="material-icons left">chat</i>Twitter
+                        </a>
+                    </div>
+                    <div class="col s6 m3">
+                        <a href="#" class="btn pink waves-effect waves-light">
+                            <i class="material-icons left">photo_camera</i>Instagram
+                        </a>
+                    </div>
+                    <div class="col s6 m3">
+                        <a href="#" class="btn indigo waves-effect waves-light">
+                            <i class="material-icons left">public</i>Facebook
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

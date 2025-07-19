@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Social Media Automation{% endblock %}</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet">
+    <style>
+        .brand-logo { font-size: 1.5rem !important; }
+        .card-panel { margin-top: 20px; }
+        .generated-post { border-left: 4px solid #2196F3; padding-left: 15px; }
+        .post-preview img { max-width: 100%; height: auto; border-radius: 8px; }
+        .status-badge { padding: 4px 8px; border-radius: 12px; color: white; font-size: 0.8rem; }
+        .status-posted { background-color: #4CAF50; }
+        .status-scheduled { background-color: #FF9800; }
+        .status-failed { background-color: #F44336; }
+        .status-cancelled { background-color: #9E9E9E; }
+    </style>
+</head>
+<body>
+    <nav class="blue darken-2">
+        <div class="nav-wrapper container">
+            <a href="{{ url_for('dashboard') }}" class="brand-logo">
+                <i class="material-icons left">share</i>SocialAI
+            </a>
+            {% if current_user.is_authenticated %}
+            <ul class="right hide-on-med-and-down">
+                <li><a href="{{ url_for('dashboard') }}"><i class="material-icons left">dashboard</i>Dashboard</a></li>
+                <li><a href="{{ url_for('new_post') }}"><i class="material-icons left">add</i>New Post</a></li>
+                <li><a href="{{ url_for('post_history') }}"><i class="material-icons left">history</i>History</a></li>
+                <li><a href="{{ url_for('account_settings') }}"><i class="material-icons left">settings</i>Settings</a></li>
+                <li><a href="{{ url_for('auth.logout') }}"><i class="material-icons left">exit_to_app</i>Logout</a></li>
+            </ul>
+            {% endif %}
+        </div>
+    </nav>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="card-panel {{ 'red' if category == 'error' else 'green' }} lighten-4">
+                        <span class="{{ 'red' if category == 'error' else 'green' }}-text text-darken-2">
+                            <i class="material-icons left">{{ 'error' if category == 'error' else 'check_circle' }}</i>
+                            {{ message }}
+                        </span>
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            M.AutoInit();
+        });
+    </script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>

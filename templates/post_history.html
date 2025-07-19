@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col s12">
+        <h4>Post History</h4>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col s12">
+        <div class="card">
+            <div class="card-content">
+                {% if posts %}
+                    <table class="striped responsive-table">
+                        <thead>
+                            <tr>
+                                <th>Content</th>
+                                <th>Platforms</th>
+                                <th>Status</th>
+                                <th>Created</th>
+                                <th>Scheduled/Posted</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for post in posts %}
+                            <tr>
+                                <td>{{ post.content[:50] }}{% if post.content|length > 50 %}...{% endif %}</td>
+                                <td>{{ post.platforms or 'N/A' }}</td>
+                                <td>
+                                    <span class="status-badge status-{{ post.status }}">
+                                        {{ post.status.title() }}
+                                    </span>
+                                </td>
+                                <td>{{ post.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>
+                                    {% if post.scheduled_time %}
+                                        {{ post.scheduled_time.strftime('%Y-%m-%d %H:%M') }}
+                                    {% elif post.posted_at %}
+                                        {{ post.posted_at.strftime('%Y-%m-%d %H:%M') }}
+                                    {% else %}
+                                        N/A
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if post.status == 'scheduled' %}
+                                        <a href="{{ url_for('cancel_post', post_id=post.id) }}" class="btn-small red">
+                                            <i class="material-icons">cancel</i>
+                                        </a>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <p class="center-align grey-text">
+                        <i class="material-icons large">history</i><br>
+                        No posts found. <a href="{{ url_for('new_post') }}">Create your first post!</a>
+                    </p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

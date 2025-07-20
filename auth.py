@@ -1,7 +1,7 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash
 from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from models import User, db
+from models import User, db, create_sample_accounts_for_user
 from error_handlers import with_database_error_handling, with_error_handling
 from logger_config import get_logger
 
@@ -24,6 +24,13 @@ def create_new_user(username, email, password):
     db.session.commit()
     logger.info(f"New user created: {username}")
     return user
+
+def setup_user_accounts(user):
+    try:
+        create_sample_accounts_for_user(user.id, user.username)
+        logger.info(f"Sample accounts created for new user: {user.username}")
+    except Exception as error:
+        logger.error(f"Failed to create sample accounts for user {user.username}: {str(error)}")
 
 def authenticate_user(username, password):
     user = User.query.filter_by(username=username).first()
@@ -58,7 +65,9 @@ def register():
             return render_template('register.html')
         
         user = create_new_user(username, email, password)
+        setup_user_accounts(user)
         login_user(user)
+        flash('Registration successful! Sample accounts created.', 'success')
         return redirect(url_for('dashboard'))
     
     return render_template('register.html')
@@ -73,7 +82,7 @@ def login():
         user = authenticate_user(username, password)
         if user:
             login_user(user)
-            return redirect(url_for('main.dashboard'))
+            return redirect(url_for('dashboard'))
         else:
             flash('Invalid username or password', 'error')
     

@@ -23,12 +23,28 @@
                                     </i>
                                     <h6>{{ account.platform }}</h6>
                                     <p>{{ account.account_name }}</p>
-                                    <p class="green-text">
-                                        <i class="material-icons tiny">check_circle</i> Connected
-                                    </p>
+                                    {% if account.access_token %}
+                                        <p class="green-text">
+                                            <i class="material-icons tiny">check_circle</i> Connected
+                                        </p>
+                                    {% else %}
+                                        <p class="red-text">
+                                            <i class="material-icons tiny">error</i> Not Connected
+                                        </p>
+                                    {% endif %}
                                 </div>
                                 <div class="card-action center-align">
-                                    <a href="#" class="btn-small red">Disconnect</a>
+                                    {% if account.access_token %}
+                                        <a href="#" class="btn-small red">Disconnect</a>
+                                    {% else %}
+                                        {% if account.platform == 'LinkedIn' %}
+                                            <a href="{{ linkedin_auth_url }}" class="btn-small blue">Connect</a>
+                                        {% elif account.platform == 'Facebook' %}
+                                            <a href="{{ facebook_auth_url }}" class="btn-small indigo">Connect</a>
+                                        {% else %}
+                                            <a href="#" class="btn-small grey">Setup Required</a>
+                                        {% endif %}
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -37,7 +53,7 @@
                 {% else %}
                     <p class="center-align grey-text">
                         <i class="material-icons large">link_off</i><br>
-                        No accounts connected yet.
+                        No accounts found.
                     </p>
                 {% endif %}
             </div>
@@ -49,28 +65,33 @@
     <div class="col s12">
         <div class="card">
             <div class="card-content">
-                <span class="card-title">Add New Account</span>
-                <p>Connect your social media accounts to start posting.</p>
+                <span class="card-title">Platform Setup Instructions</span>
                 <div class="row">
-                    <div class="col s6 m3">
-                        <a href="#" class="btn blue waves-effect waves-light">
-                            <i class="material-icons left">business</i>LinkedIn
-                        </a>
+                    <div class="col s12 m6">
+                        <h6>LinkedIn</h6>
+                        <p>1. Create a LinkedIn Developer App</p>
+                        <p>2. Add your Client ID and Secret to config</p>
+                        <p>3. Click Connect button above</p>
                     </div>
-                    <div class="col s6 m3">
-                        <a href="#" class="btn light-blue waves-effect waves-light">
-                            <i class="material-icons left">chat</i>Twitter
-                        </a>
+                    <div class="col s12 m6">
+                        <h6>Twitter</h6>
+                        <p>1. Create a Twitter Developer App</p>
+                        <p>2. Add API keys to config</p>
+                        <p>3. Generate access tokens</p>
                     </div>
-                    <div class="col s6 m3">
-                        <a href="#" class="btn pink waves-effect waves-light">
-                            <i class="material-icons left">photo_camera</i>Instagram
-                        </a>
+                </div>
+                <div class="row">
+                    <div class="col s12 m6">
+                        <h6>Facebook</h6>
+                        <p>1. Create a Facebook App</p>
+                        <p>2. Add App ID and Secret to config</p>
+                        <p>3. Click Connect button above</p>
                     </div>
-                    <div class="col s6 m3">
-                        <a href="#" class="btn indigo waves-effect waves-light">
-                            <i class="material-icons left">public</i>Facebook
-                        </a>
+                    <div class="col s12 m6">
+                        <h6>Instagram</h6>
+                        <p>1. Connect Facebook Business account</p>
+                        <p>2. Link Instagram Business account</p>
+                        <p>3. Use Facebook connection</p>
                     </div>
                 </div>
             </div>

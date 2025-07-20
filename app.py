@@ -5,13 +5,16 @@ import json
 import os
 
 from config import Config, get_upload_folder
-from models import db, User, SocialAccount, Post, init_db
+from models import db, User, SocialAccount, Post, init_db, ensure_user_has_accounts
 from auth import auth_bp
 from ai_service import generate_complete_post
 from scheduler import start_scheduler, schedule_post, cancel_scheduled_post
 from error_handlers import with_error_handling, with_database_error_handling
 from logger_config import setup_application_logger, get_logger
 from image_generation import cleanup_old_images
+from social_platforms.platform_manager import post_to_platform, validate_platform_requirements
+from social_platforms.linkedin_publisher import get_linkedin_auth_url, exchange_code_for_token as linkedin_exchange
+from social_platforms.facebook_publisher import get_facebook_auth_url, exchange_code_for_token as facebook_exchange
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -36,6 +39,7 @@ def serve_generated_image(filename):
     return send_from_directory(upload_folder, filename)
 
 def get_user_accounts():
+    ensure_user_has_accounts(current_user.id, current_user.username)
     accounts = SocialAccount.query.filter_by(user_id=current_user.id, is_active=True).all()
     logger.info(f"Retrieved {len(accounts)} accounts for user {current_user.id}")
     return accounts
@@ -58,6 +62,31 @@ def create_post_record(content, image_url, platforms, scheduled_time=None):
     logger.info(f"Post record created with ID {post.id} for user {current_user.id}")
     return post
 
+def publish_post_immediately(content, image_url, selected_accounts):
+    success_count = 0
+    failed_platforms = []
+    
+    for account in selected_accounts:
+        try:
+            is_valid, error_msg = validate_platform_requirements(account.platform, content, image_url)
+            if not is_valid:
+                failed_platforms.append(f"{account.platform}: {error_msg}")
+                continue
+            
+            if account.access_token:
+                result = post_to_platform(account.platform, account.access_token, content, image_url)
+                if result:
+                    success_count += 1
+                else:
+                    failed_platforms.append(account.platform)
+            else:
+                failed_platforms.append(f"{account.platform}: No access token - connect account first")
+        except Exception as error:
+            failed_platforms.append(f"{account.platform}: {str(error)}")
+            logger.error(f"Failed to post to {account.platform}: {str(error)}")
+    
+    return success_count, failed_platforms
+
 def process_post_submission(content, image_url, selected_accounts, schedule_datetime):
     platforms = [acc.platform for acc in selected_accounts]
     
@@ -67,18 +96,31 @@ def process_post_submission(content, image_url, selected_accounts, schedule_date
         flash(f'Post scheduled for {schedule_datetime.strftime("%Y-%m-%d %H:%M")}', 'success')
         logger.info(f"Post {post.id} scheduled for {schedule_datetime}")
     else:
+        success_count, failed_platforms = publish_post_immediately(content, image_url, selected_accounts)
+        
         post = create_post_record(content, image_url, platforms)
-        post.status = 'posted'
-        post.posted_at = datetime.utcnow()
+        
+        if success_count > 0:
+            post.status = 'posted'
+            post.posted_at = datetime.utcnow()
+            if failed_platforms:
+                post.error_message = f"Failed on: {', '.join(failed_platforms)}"
+            flash(f'Post published successfully to {success_count} platforms!', 'success')
+            if failed_platforms:
+                flash(f'Failed on: {", ".join(failed_platforms)}', 'error')
+        else:
+            post.status = 'failed'
+            post.error_message = f'Failed on all platforms: {", ".join(failed_platforms)}'
+            flash('Post failed to publish. Please connect your social media accounts first.', 'error')
+        
         db.session.commit()
-        flash('Post published successfully!', 'success')
-        logger.info(f"Post {post.id} published immediately")
+        logger.info(f"Post {post.id} published to {success_count} platforms")
 
 def get_dashboard_stats():
     stats = {
         'total_posts': Post.query.filter_by(user_id=current_user.id).count(),
         'scheduled_posts': Post.query.filter_by(user_id=current_user.id, status='scheduled').count(),
-        'connected_accounts': len(get_user_accounts())
+        'connected_accounts': len([acc for acc in get_user_accounts() if acc.access_token])
     }
     return stats
 
@@ -164,7 +206,74 @@ def post_history():
 @with_database_error_handling('account_settings_load', 'dashboard')
 def account_settings():
     accounts = get_user_accounts()
-    return render_template('account_settings.html', accounts=accounts)
+    linkedin_auth_url = get_linkedin_auth_url()
+    facebook_auth_url = get_facebook_auth_url()
+    
+    return render_template('account_settings.html', accounts=accounts, 
+                         linkedin_auth_url=linkedin_auth_url, 
+                         facebook_auth_url=facebook_auth_url)
+
+@app.route('/auth/linkedin/callback')
+@login_required
+def linkedin_callback():
+    code = request.args.get('code')
+    if code:
+        try:
+            access_token = linkedin_exchange(code)
+            
+            account = SocialAccount.query.filter_by(
+                user_id=current_user.id,
+                platform='LinkedIn'
+            ).first()
+            
+            if account:
+                account.access_token = access_token
+            else:
+                account = SocialAccount(
+                    user_id=current_user.id,
+                    platform='LinkedIn',
+                    account_name=f"{current_user.username}_linkedin",
+                    access_token=access_token
+                )
+                db.session.add(account)
+            
+            db.session.commit()
+            flash('LinkedIn account connected successfully!', 'success')
+        except Exception as error:
+            flash(f'LinkedIn connection failed: {str(error)}', 'error')
+    
+    return redirect(url_for('account_settings'))
+
+@app.route('/auth/facebook/callback')
+@login_required
+def facebook_callback():
+    code = request.args.get('code')
+    if code:
+        try:
+            access_token = facebook_exchange(code)
+            
+            account = SocialAccount.query.filter_by(
+                user_id=current_user.id,
+                platform='Facebook'
+            ).first()
+            
+            if account:
+                account.access_token = access_token
+            else:
+                account = SocialAccount(
+                    user_id=current_user.id,
+                    platform='Facebook',
+                    account_name=f"{current_user.username}_facebook",
+                    access_token=access_token
+                )
+                db.session.add(account)
+            
+            db.session.commit()
+            flash('Facebook account connected successfully!', 'success')
+        except Exception as error:
+            flash(f'Facebook connection failed: {str(error)}', 'error')
+    
+    return redirect(url_for('account_settings'))
 
 @app.route('/cancel_post/<int:post_id>')
 @login_required
@@ -196,5 +305,5 @@ if __name__ == '__main__':
         init_db()
         perform_maintenance_tasks()
     start_scheduler()
-    logger.info("Application started successfully with AI image generation")
+    logger.info("Application started successfully with real social media posting")
     app.run(debug=True)

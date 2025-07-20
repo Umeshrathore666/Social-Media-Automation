@@ -44,26 +44,36 @@ def init_database_tables():
         logger.error(f"Failed to create database tables: {str(error)}")
         raise
 
-def create_sample_accounts():
-    from flask_login import current_user
+def create_sample_accounts_for_user(user_id, username):
     try:
-        if hasattr(current_user, 'id') and current_user.id:
-            existing_accounts = SocialAccount.query.filter_by(user_id=current_user.id).first()
-            if not existing_accounts:
-                platforms = ['LinkedIn', 'Twitter', 'Instagram', 'Facebook']
-                for platform in platforms:
-                    account = SocialAccount(
-                        user_id=current_user.id,
-                        platform=platform,
-                        account_name=f"{current_user.username}_{platform.lower()}"
-                    )
-                    db.session.add(account)
-                db.session.commit()
-                logger.info(f"Created sample accounts for user {current_user.id}")
+        existing_accounts = SocialAccount.query.filter_by(user_id=user_id).first()
+        if not existing_accounts:
+            platforms = ['LinkedIn', 'Twitter', 'Instagram', 'Facebook']
+            for platform in platforms:
+                account = SocialAccount(
+                    user_id=user_id,
+                    platform=platform,
+                    account_name=f"{username}_{platform.lower()}",
+                    access_token=None,
+                    is_active=True
+                )
+                db.session.add(account)
+            db.session.commit()
+            logger.info(f"Created sample accounts for user {user_id}")
+            return True
+        else:
+            logger.info(f"Sample accounts already exist for user {user_id}")
+            return False
     except Exception as error:
         logger.error(f"Failed to create sample accounts: {str(error)}")
         db.session.rollback()
+        raise
+
+def ensure_user_has_accounts(user_id, username):
+    account_count = SocialAccount.query.filter_by(user_id=user_id).count()
+    if account_count == 0:
+        create_sample_accounts_for_user(user_id, username)
+        logger.info(f"Ensured accounts exist for user {user_id}")
 
 def init_db():
     init_database_tables()
-    create_sample_accounts()
